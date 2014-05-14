@@ -19,11 +19,54 @@ class Player():
         Player.next_id += 1
 
 
+class Field():
+    def __init__(self):
+        self.matrix = [[0, 0, 0] for i in range(3)]
+        self.win_event = lambda who, how: None
+
+    def at(self, x, y):
+        return self.matrix[x][y]
+
+    def set(self, x, y, pl):
+        if self.at(x, y) == 0:
+            self.matrix[x][y] = pl
+            return True
+        else:
+            return False
+
+    def check_for_win(self):
+        how = []
+
+        for x in range(0, 2):
+            if self.matrix.at(x, 0) == self.matrix.at(x, 1) == self.matrix.at(x, 2):
+                for y in range(0, 2):
+                    how.append((x, y))
+                return how
+
+        for y in range(0, 2):
+            if self.matrix.at(0, y) == self.matrix.at(1, y) == self.matrix.at(2, y):
+                for x in range(0, 2):
+                    how.append((x, y))
+                return how
+
+        if self.matrix.at(0, 0) == self.matrix.at(1, 1) == self.matrix.at(2, 2):
+            return [(0, 0), (1, 1), (2, 2)]
+
+        if self.matrix.at(2, 0) == self.matrix.at(1, 1) == self.matrix.at(0, 2):
+            return [(2, 0), (1, 1), (0, 2)]
+
+        return False
+
+
 class Room():
     rooms = {}
 
     def __init__(self):
-        pass
+        self.first_player = None
+        self.second_player = None
+        self.fields = [[Field(), Field(), Field()] for i in range(3)]
+        self.main_field = Field()
+
 
 
 class UnregisteredPacketError(Exception):
@@ -80,6 +123,8 @@ class Packet0Test(Packet):
             "text": self.text
         }
 
+
+# TODO: implement all packets
 
 class Packet1JoinRoom(Packet):
     def __init__(self, args):
@@ -144,13 +189,7 @@ def logic():
     while True:
         begin = time.time()
 
-        print(1)
-
-        for pl_id in Player.players:
-            player = Player.player_by_id(pl_id)
-            print(pl_id)
-            pck = Packet0Test({"text": "Hello."}, player)
-            Packet.send(pck)
+        # TODO: logic updates here
 
         spent_time = time.time() - begin
 
