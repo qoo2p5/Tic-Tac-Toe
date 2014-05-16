@@ -9,12 +9,13 @@ class Player():
     next_id = 0
 
     @staticmethod
-    def player_by_id(player_id):
+    def by_id(player_id):
         return Player.players[player_id]
 
     def __init__(self, ws):
         self.id = Player.next_id
         self.socket = ws
+        self.room = None
         Player.players[self.id] = self
         Player.next_id += 1
 
@@ -60,6 +61,13 @@ class Field():
 
 class Room():
     rooms = {}
+
+    @staticmethod
+    def by_name(name):
+        if name in Room.rooms:
+            return Room.rooms[name]
+        else:
+            return None
 
     def __init__(self):
         self.first_player = None
@@ -127,8 +135,32 @@ class Packet0Test(Packet):
 # TODO: implement all packets
 
 class Packet1JoinRoom(Packet):
-    def __init__(self, args):
-        pass
+    def __init__(self, args, player):
+        self.room = args["room"]
+        self.password = args["pass"]
+        self.result = ""
+        self.player = player
+
+    def handle(self):
+        room_name = self.room
+        room = Room.by_name(room_name)
+        if room is None:
+            self.result = "RoomDoesNotExist"
+        elif room.can_join:
+            if room.password == self.password:
+                self.player.join(room)
+
+                self.result = "Okay"
+            else:
+                self.result = "WrongPassword"
+        else:
+            self.result = "CanNotJoinRoom"
+
+    def send_data(self):
+        return {
+            "result": self.result
+        }
+
 
 
 class Packet2CreateRoom(Packet):
