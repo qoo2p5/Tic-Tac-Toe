@@ -431,10 +431,8 @@ def logic():
     while True:
         begin = time.time()
 
-        time_now = time.time()
-
         for player in Player.players:
-            if time_now - player.last_activity > 60 and player.room is not None:
+            if begin - player.last_activity > 60 and player.room is not None:
                 Packet.send(Packet6GameBreak({"reason": "YouAreUnactive"}, player))
                 Packet.send(Packet6GameBreak({"reason": "OtherPlayerIsUnactive"}, player.room.other(player)))
 
