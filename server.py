@@ -85,7 +85,7 @@ class Room():
     def remove(room):
         del Room.rooms[room.name]
 
-    def __init__(self, name, password=""):
+    def __init__(self, name, password):
         self.name = name
         self.first_player = None
         self.second_player = None
@@ -248,8 +248,15 @@ class Packet1JoinRoom(Packet):
         Packet.send(self)
 
     def send_data(self):
+        if self.player.number == 1:
+            return {
+                "result": self.result,
+                "number": self.player.number
+            }
         return {
-            "result": self.result
+            "result": self.result,
+            "number": self.player.number,
+            "other_name": self.player.room.other(self.player).name
         }
 
 
@@ -258,6 +265,10 @@ class Packet2CreateRoom(Packet):
 
     def __init__(self, args, player):
         self.room_name = args["room"]
+        if "pass" in args:
+            self.password = args["pass"]
+        else:
+            self.password = ""
         self.result = ""
         self.player = player
 
@@ -268,7 +279,7 @@ class Packet2CreateRoom(Packet):
         if Room.by_name(self.room_name) is not None:
             self.result = "RoomNameAlreadyUsed"
         else:
-            Room(self.room_name)
+            Room(self.room_name, self.password)
             self.result = "Okay"
 
         Packet.send(self)
@@ -411,8 +422,8 @@ class Packet9RoomsList(Packet):
         Packet.send(self)
 
     def send_data(self):
-        return (
-            {'name': room.name, 'pass': room.password != ''} for room in Room.rooms if not room.started
+        return list(
+            {"name": Room.rooms[room].name, "pass": Room.rooms[room].password != ""} for room in Room.rooms if not Room.rooms[room].started
         )
 
 
@@ -445,7 +456,7 @@ def connection(websocket, path):
 
         except Exception as e:
             print(str(e))
-            break
+            #break
 
     room = player.room
     other_player = player.room.other(player)
@@ -465,6 +476,7 @@ def logic():
         print(Player.players)
         print(Room.rooms)
 
+        to_delete = []
         for player_id in Player.players:
             player = Player.players[player_id]
             if (begin - player.last_activity > 360 and player.room is not None) or not player.socket.open:
@@ -474,9 +486,14 @@ def logic():
                     player.socket.close()
                     player.room.other(player).socket.close()
                 except: pass
-                Room.remove(player.room)
-                Player.remove(player)
-                Player.remove(player.room.other(player))
+                try:
+                    to_delete.append(player)
+                    to_delete.append(player.room.other(player))
+                    Room.remove(player.room)
+                except: pass
+
+        for player in to_delete:
+            Player.remove(player)
 
         spent_time = time.time() - begin
 
