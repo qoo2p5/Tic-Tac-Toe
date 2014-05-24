@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Крестики-нолики</title>
+        <meta charset="UTF-8"/>
+        <script src="client.js"></script>
+        <link href='http://fonts.googleapis.com/css?family=Exo+2:200,400&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            
+            body {
+                background: #fafafa;
+                font-family: 'Exo 2', sans-serif;
+                font-weight: 400;
+            }
+            
+            h1, h2 {
+                text-align: center;
+                font-weight: 200;
+            }
+            
+            .undertitle {
+                margin-left: 5%;
+                text-align: center;
+                font-weight: 200;
+            }
+            
+            .clear {
+                clear: both;
+            }
+            
+            .hidden {
+                display: none;
+            }
+            
+            #canvas {
+                display: block;
+                width: 458px;
+                margin: 0 auto;
+            }
+            
+            #chat {
+                width: 640px;
+                height: 458px;
+                border: 1px solid black;
+                box-sizing: border-box;
+                margin: 0 auto;
+                margin-top: 1em;
+            }
+            
+            #msgs {
+                width: 100%;
+                height: 360px;
+                overflow-y: scroll;
+            }
+            
+            ::-webkit-scrollbar {
+                width: 12px;
+                box-sizing: border-box;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: #eee;
+                border-left: 1px solid #404040;
+                border-top: 1px solid #404040;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: #909090;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #707070;
+            }
+            
+            ::-webkit-scrollbar-thumb:active {
+                background: #505050;
+            }
+            
+            .msg {
+                width: 100%;
+                margin-bottom: 0.2em;
+            }
+            
+            .msg_l {
+                float: left;
+                border: 1px solid black;
+                border-left: none;
+                min-width: 100px;
+                min-height: 1.4em;
+                padding: 0.2em;
+                box-sizing: border-box;
+                border-bottom-right-radius: 0.7em;
+                border-top-right-radius: 0.7em;
+            }
+            
+            textarea {
+                outline: none;
+                border: 1px solid black;
+                border-left: none;
+                height: 41px;
+                width: 540px;
+                box-sizing: border-box;
+                font-size: 16px;
+                resize: none;
+                float: left;
+            }
+            
+            #chat button {
+                font-family: 'Exo 2', sans-serif;
+                font-size: 36px;
+                text-align: center;
+                border: 1px solid black;
+                border-left: none;
+                border-right: none;
+                height: 41px;
+                width: 98px;
+                box-sizing: border-box;
+                float: right;
+            }
+            
+            .room button {
+                font-family: 'Exo 2', sans-serif;
+                font-size: 36px;
+                text-align: center;
+                border: none;
+                border-left: 1px solid #404040;
+                height: 50px;
+                width: 120px;
+                box-sizing: border-box;
+                float: right;
+            }
+            
+            button:active {
+                outline: none;
+                box-shadow: 0 0 30px 5px #c0c0c0 inset;
+            }
+            
+            button:focus {
+                outline: none;
+            }
+            
+            .msg_r {
+                float: right;
+                text-align: right;
+                border: 1px solid black;
+                border-right: none;
+                min-width: 100px;
+                min-height: 1.4em;
+                padding: 0.2em;
+                box-sizing: border-box;
+                border-bottom-left-radius: 0.7em;
+                border-top-left-radius: 0.7em;
+            }
+            
+            @media(min-width: 1150px) {
+                .main {
+                    margin-top: 2.5em;
+                    width: 1118px;
+                }
+                #canvas {
+                    float: left;
+                }
+                #chat {
+                    float: right;
+                    margin-top: 0;
+                }
+            }
+            
+            @media(min-height: 700px) {
+                .main {
+                    margin-top: 4em;
+                }
+            }
+            
+            .room {
+                width: 600px;
+                height: 50px;
+                margin: 0 auto;
+                margin-top: 1em;
+                border: 1px solid #404040;
+            }
+            
+            .name {
+                float: left;
+                font-size: 1.5em;
+                font-weight: 200;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <h1>Крестики-нолики</h1>
+        <div class="undertitle">С мультиплеером <s>и котиками</s></div>
+        
+        <div id="room-list">
+            Gagaag
+        </div>
+        
+        <div id="game">
+            <canvas id="canvas" class="hidden" width="458" height="458"></canvas>
+            
+            <div id="chat" class="hidden">
+                <h2 style="margin-bottom: 20px; font-size: 30px">Чат</h2>
+                
+                <div id="msgs">
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_l">This is a test message</div>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="msg">
+                        <div class="msg_r">This is a test answer</div>
+                        <div class="clear"></div>
+                    </div>
+                </div>
+                <textarea></textarea>
+                <button><p style="margin-top: -6px">—></p></button>
+            </div>
+    </body>
+</html>
