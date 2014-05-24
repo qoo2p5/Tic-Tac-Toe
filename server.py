@@ -82,8 +82,8 @@ class Room():
             return None
 
     @staticmethod
-    def remove(name):
-        del Room.rooms[name]
+    def remove(room):
+        del Room.rooms[room.name]
 
     def __init__(self, name, password=""):
         self.name = name
@@ -103,6 +103,7 @@ class Room():
             return 1
         else:
             self.second_player = player
+            Packet.send(Packet3OtherJoinedRoom({'who': 'Кто-то'}, self.first_player))
             self.started = True
             return 2
 
@@ -195,6 +196,8 @@ class Packet():
     @staticmethod
     @asyncio.coroutine
     def coroutine_send_packet(packet):
+        if not packet.player.socket.open:
+            return
         send_data = Packet.packetize(packet, packet.send_data())
         print(send_data)
         yield from packet.player.socket.send(send_data)
@@ -281,13 +284,11 @@ class Packet3OtherJoinedRoom(Packet):
 
     def __init__(self, args, player):
         self.who = args["who"]
-        self.room_name = args["room"]
         self.player = player
 
     def send_data(self):
         return {
-            "who": self.who,
-            "room": self.room_name
+            "who": self.who
         }
 
 
@@ -327,14 +328,19 @@ class Packet4SetField(Packet):
     def send_data(self):
         return {
             "type": self.type,
-            "data": self.data
+            "data": self.data,
+            "player": self.player.number
         }
 
 
 class Packet5ChatMessage(Packet):
+    packet_id = 5
+
     def __init__(self, args, player):
         self.message = args["msg"]
         self.player = player
+        self.who_name = player.name
+        self.who_number = player.number
 
     def handle(self):
         if self.player.room is None:
@@ -344,13 +350,16 @@ class Packet5ChatMessage(Packet):
             return
 
         Packet.send(self)
-        Packet.send(Packet5ChatMessage({"msg": self.message}, self.player))
+        pck = Packet5ChatMessage({"msg": self.message}, self.player.room.other(self.player))
+        pck.who_number = self.who_number
+        pck.who_name = self.who_name
+        Packet.send(pck)
 
     def send_data(self):
         return {
             "msg": self.message,
-            "who": self.player.name,
-            "who_number": self.player.number
+            "who": self.who_name,
+            "who_number": self.who_number
         }
 
 
@@ -368,6 +377,8 @@ class Packet6GameBreak(Packet):
 
 
 class Packet7Replay(Packet):
+    packet_id = 7
+
     def __init__(self, args, player):
         self.player = player
 
@@ -381,11 +392,29 @@ class Packet7Replay(Packet):
 
 
 class Packet8OtherWantsReplay(Packet):
+    packet_id = 8
+
     def __init__(self, args, player):
         self.player = player
 
     def send_data(self):
         return {}
+
+
+class Packet9RoomsList(Packet):
+    packet_id = 9
+
+    def __init__(self, args, player):
+        self.player = player
+
+    def handle(self):
+        Packet.send(self)
+
+    def send_data(self):
+        return (
+            {'name': room.name, 'pass': room.password != ''} for room in Room.rooms if not room.started
+        )
+
 
 Packet.register_client_packet(Packet0Test)
 Packet.register_client_packet(Packet1JoinRoom)
@@ -395,6 +424,8 @@ Packet.register_client_packet(Packet4SetField)
 Packet.register_client_packet(Packet5ChatMessage)
 Packet.register_client_packet(Packet6GameBreak)
 Packet.register_client_packet(Packet7Replay)
+Packet.register_client_packet(Packet8OtherWantsReplay)
+Packet.register_client_packet(Packet9RoomsList)
 
 
 @asyncio.coroutine
@@ -414,7 +445,7 @@ def connection(websocket, path):
 
         except Exception as e:
             print(str(e))
-            # break
+            break
 
     room = player.room
     other_player = player.room.other(player)
@@ -431,17 +462,28 @@ def logic():
     while True:
         begin = time.time()
 
-        for player in Player.players:
-            if begin - player.last_activity > 60 and player.room is not None:
-                Packet.send(Packet6GameBreak({"reason": "YouAreUnactive"}, player))
-                Packet.send(Packet6GameBreak({"reason": "OtherPlayerIsUnactive"}, player.room.other(player)))
+        print(Player.players)
+        print(Room.rooms)
+
+        for player_id in Player.players:
+            player = Player.players[player_id]
+            if (begin - player.last_activity > 360 and player.room is not None) or not player.socket.open:
+                try:
+                    Packet.send(Packet6GameBreak({"reason": "YouAreUnactive"}, player))
+                    Packet.send(Packet6GameBreak({"reason": "OtherPlayerIsUnactive"}, player.room.other(player)))
+                    player.socket.close()
+                    player.room.other(player).socket.close()
+                except: pass
+                Room.remove(player.room)
+                Player.remove(player)
+                Player.remove(player.room.other(player))
 
         spent_time = time.time() - begin
 
         yield from asyncio.sleep(1 - spent_time)
 
 
-srv = websockets.serve(connection, "0.0.0.0", 81)
+srv = websockets.serve(connection, "0.0.0.0", 8181)
 
 asyncio.async(logic())
 
