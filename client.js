@@ -3,6 +3,7 @@ var _height;  // height of canvas
 var ctx;  // canvas context
 var canvas;  // canvas element
 
+var menuBlock;  // DOM element #menu
 var roomList;  // DOM element #room-list
 var gameBlock;  // DOM element #game
 
@@ -70,7 +71,7 @@ FieldView.prototype.clickPoint = function(x, y) {
     y -= this.y;
     var i = Math.floor(x / (this.width / 3 + 1));
     var j = Math.floor(y / (this.height / 3 + 1));
-    Packet.send(new Packet4SetField({cell: [this.i, this.j], field: [i, j]}));
+    Packet.send(new Packet4SetField({cell: [i, j], field: [this.i, this.j]}));
 }
 
 FieldView.prototype.drawBounds = function() {
@@ -105,9 +106,10 @@ function initFields() {
                     ctx.beginPath();
                     ctx.lineWidth = 2;
                     if (whatPlayer == 1) {
-                        line(3 + 152 * i, 3 + 152 * i, 151 + 152 * i, 151 + 152 * i);
+                        line(3 + 152 * i, 3 + 152 * j, 151 + 152 * i, 151 + 152 * j);
+                        line(3 + 152 * i, 151 + 152 * j, 151 + 152 * i, 3 + 152 * j);
                     } else {
-                        circle(152 * i + 78, 152 * i + 78, 70);
+                        circle(152 * i + 78, 152 * j + 78, 70);
                     }
                     ctx.stroke();
                 }
@@ -142,7 +144,6 @@ function initFields() {
                             var whatPlayer = this.field.at(i, j);
                             ctx.beginPath();
                             ctx.lineWidth = 2;
-                            console.log(this.i + " " + this.j + "; " + i + " " + j)
                             if (whatPlayer == 1) {
                                 line(this.x + 2 + 51 * i, this.y + 2 + 51 * j, this.x + 48 + 51 * i, this.y + 48 + 51 * j)
                                 line(this.x + 48 + 51 * i, this.y + 2 + 51 * j, this.x + 2 + 51 * i, this.y + 48 + 51 * j)
@@ -172,6 +173,9 @@ function initCanvas() {
     window.setInterval(update, 100);
 }
 
+function update() {
+    draw();
+}
 
 function draw() {
     clear();
@@ -195,8 +199,6 @@ function mouseMove(event) {
                 offsetY += element.offsetTop;
             } while ((element = element.offsetParent));
         }
-        mouse.x = mx - canvas.offsetX;
-        mouse.y = my - canvas.offsetY;
 }
 
 function everyField(func) {
@@ -236,7 +238,7 @@ Packet.prototype.handle = function() { return { } }
 Packet.packets = {};
 
 Packet.registerServerPacket = function(klass) {
-    Packet.packets[klass.packet_id] = klass
+    Packet.packets[klass.packet_id] = klass;
 };
 
 Packet.send = function(packet) {
@@ -251,30 +253,33 @@ Packet.send = function(packet) {
 Packet.handleServerPacket = function(packet) {
     var id = packet.id;
     var args = packet.args;
+    if(id == 1) console.log(new Packet.packets[id](args).handle);
     new Packet.packets[id](args).handle();
 };
 
 
 Packet1JoinRoom = function(args) {
+    this.packet_id = 1;
+    
     this.room_name = args.room;
     this.password = args.pass;
     this.result = args.result;
     this.number = args.number;
     this.other_name = args.other_name;
-    
-    this.packet_id = Packet1JoinRoom.packet_id;
 };
 
 Packet1JoinRoom.packet_id = 1;
 
-Packet1JoinRoom.prototype = Packet;
+Packet1JoinRoom.prototype = new Packet();
 
-Packet1JoinRoom.prototype.handle = function() {
-    if (result != "Okay") {
+Packet1JoinRoom.prototype.handle = function() {    
+    if (this.result != "Okay") {
         return;
     }
     
-    console.log(this);
+    menuBlock.style.display = "none";
+    gameBlock.style.display = "block";
+    initCanvas();
     
     PLAYER = this.number;
     if (PLAYER == 2) {
@@ -284,7 +289,6 @@ Packet1JoinRoom.prototype.handle = function() {
 };
 
 Packet1JoinRoom.prototype.send_data = function() {
-    console.log(2);
     return {
         room: this.room_name,
         pass: this.password
@@ -293,26 +297,59 @@ Packet1JoinRoom.prototype.send_data = function() {
 
 
 Packet2CreateRoom = function(args) {
+    this.packet_id = 2;
+    
     this.room_name = args.room;
     this.password = args.pass;
     this.result = args.result;
     this.number = args.number;
     this.other_name = args.other_name;
-    
-    this.packet_id = Packet2CreateRoom.packet_id;
 };
 
 Packet2CreateRoom.packet_id = 2;
 
-Packet2CreateRoom.prototype = Packet;
+Packet2CreateRoom.prototype = new Packet();
 
-Packet2CreateRoom.prototype.handle = function() {
-    Packet.send(new Packet9RoomList());
+Packet2CreateRoom.prototype.send_data = function() {
+    return {
+        room: this.room_name,
+        pass: this.password
+    };
+};
+
+
+Packet4SetField = function(args) {
+    this.packet_id = 4;
+    
+    this.cell = args.cell;
+    this.field = args.field;
+    this.player = args.player;
+    this.data = args.data;
+    this.type = args.type;
+};
+
+Packet4SetField.packet_id = 4;
+
+Packet4SetField.prototype = new Packet();
+
+Packet4SetField.prototype.handle = function() {
+    if (this.type == 1) {
+        fields[this.data[0][0]][this.data[0][1]].field.set(this.data[1][0], this.data[1][1], this.player);
+    } else if (this.type == 2 || this.type == 3) {
+        fieldMain.field.set(this.data[0][0], this.data[0][1], this.player);
+    }
+};
+
+Packet4SetField.prototype.send_data = function() {
+    return {
+        cell: this.cell,
+        field: this.field
+    };
 };
 
 
 Packet9RoomList = function(args) {
-    this.packet_id = Packet9RoomList.packet_id;
+    this.packet_id = 9;
     
     if (args === undefined) {
         return;
@@ -327,25 +364,22 @@ Packet9RoomList = function(args) {
 
 Packet9RoomList.packet_id = 9;
 
-Packet9RoomList.prototype = Packet.prototype;
+Packet9RoomList.prototype = new Packet();
 
 Packet9RoomList.prototype.handle = function() {
     text = "";
     for (var i = 0; i < this.rooms.length; i++) {
         text += renderRoomInfo(this.rooms[i]);
     }
-    console.log(text);
     roomList.innerHTML = text;
     var buttons = roomList.getElementsByClassName("play");
     for (var i = 0; i < buttons.length; i++) {
         var el = buttons[i];
         el.addEventListener("click", function(event) {
             var name = event.target.parentElement.getElementsByClassName("name")[0].textContent;
-            console.log(name);
             if (NEED_ROOM_PASS[name]) {
                 return;
             } else {
-                console.log(1);
                 Packet.send(new Packet1JoinRoom({room: name, pass: ""}));
             }
         }, false);
@@ -354,6 +388,7 @@ Packet9RoomList.prototype.handle = function() {
 
 Packet.registerServerPacket(Packet1JoinRoom);
 Packet.registerServerPacket(Packet2CreateRoom);
+Packet.registerServerPacket(Packet4SetField);
 Packet.registerServerPacket(Packet9RoomList);
 
 function renderRoomInfo(roomInfo) {
@@ -362,6 +397,24 @@ function renderRoomInfo(roomInfo) {
 
 
 function init() {
+    el = document.getElementById("create-room-pass");
+    el.addEventListener("mouseover", function() {
+        document.getElementById("about-password").classList.add("show-about");
+    }, false);
+    el.addEventListener("mouseout", function() {
+        document.getElementById("about-password").classList.remove("show-about");
+    }, false);
+    
+    document.getElementById("create-button").addEventListener("click", function() {
+        if (ws.OPEN) {
+            Packet.send(new Packet2CreateRoom({
+                                                room: document.getElementById("create-room-name").value,
+                                                pass: document.getElementById("create-room-pass").value
+                                            }));
+        }
+    }, false);
+    
+    menuBlock = document.getElementById("menu")
     roomList = document.getElementById("room-list");
     gameBlock = document.getElementById("game");
     

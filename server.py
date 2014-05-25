@@ -52,13 +52,13 @@ class Field():
 
         for x in range(0, 2):
             if self.at(x, 0) == self.at(x, 1) == self.at(x, 2) != 0:
-                for y in range(0, 3):
+                for y in range(0, 2):
                     how.append((x, y))
                 return how
 
         for y in range(0, 2):
             if self.at(0, y) == self.at(1, y) == self.at(2, y) != 0:
-                for x in range(0, 3):
+                for x in range(0, 2):
                     how.append((x, y))
                 return how
 
@@ -310,6 +310,7 @@ class Packet4SetField(Packet):
         self.cell = args["cell"]  # (x, y)
         self.field = args["field"]  # (x, y)
         self.player = player
+        self.who_number = player.number
         self.type = None
         self.data = None
 
@@ -334,13 +335,14 @@ class Packet4SetField(Packet):
         pck_to_other = Packet4SetField({"cell": self.cell, "field": self.field}, self.player.room.other(self.player))
         pck_to_other.type = self.type
         pck_to_other.data = self.data
+        pck_to_other.who_number = self.who_number
         Packet.send(pck_to_other)
 
     def send_data(self):
         return {
             "type": self.type,
             "data": self.data,
-            "player": self.player.number
+            "player": self.who_number
         }
 
 
@@ -456,13 +458,13 @@ def connection(websocket, path):
 
         except Exception as e:
             print(str(e))
-            #break
+            raise e
 
     room = player.room
-    other_player = player.room.other(player)
-    if room is not None and other_player is not None:
-        Packet.send(Packet6GameBreak({"reason": "OtherPlayerDisconnected"}, player))
-        Player.remove(other_player)
+    if room is not None:
+        if player.room.other(player) is not None:
+            Packet.send(Packet6GameBreak({"reason": "OtherPlayerDisconnected"}, player.room.other(player)))
+            Player.remove(player.room.other(player))
         Room.remove(room)
 
     Player.remove(player)
@@ -474,26 +476,38 @@ def logic():
         begin = time.time()
 
         print(Player.players)
-        print(Room.rooms)
+        for r in Room.rooms:
+            r = Room.rooms[r]
+            print(r.started, r.first_player, r.second_player)
 
         to_delete = []
-        for player_id in Player.players:
-            player = Player.players[player_id]
-            if (begin - player.last_activity > 360 and player.room is not None) or not player.socket.open:
-                try:
-                    Packet.send(Packet6GameBreak({"reason": "YouAreUnactive"}, player))
-                    Packet.send(Packet6GameBreak({"reason": "OtherPlayerIsUnactive"}, player.room.other(player)))
-                    player.socket.close()
-                    player.room.other(player).socket.close()
-                except: pass
-                try:
-                    to_delete.append(player)
-                    to_delete.append(player.room.other(player))
-                    Room.remove(player.room)
-                except: pass
 
-        for player in to_delete:
-            Player.remove(player)
+        for player_id in Player.players:
+
+            player = Player.players[player_id]
+
+            if not player.socket.open:
+                if player.room is not None:
+                    if player.room.other(player) is not None:
+                        to_delete.append(player.room.other(player))
+
+                    Room.remove(player.room)
+
+                to_delete.append(player)
+
+            if player.last_activity < begin - 360:
+                if player.room is not None:
+                    if player.room.other(player) is not None:
+                        Packet.send(Packet6GameBreak({"reason": "OtherUnactive"}))
+                        to_delete.append(player.room.other(player))
+
+                    Room.remove(player.room)
+
+                Packet.send(Packet6GameBreak({"reason": "UUnactive"}))
+                to_delete.append(player)
+
+        for player_id in to_delete:
+            Player.remove(Player.players[player_id])
 
         spent_time = time.time() - begin
 
