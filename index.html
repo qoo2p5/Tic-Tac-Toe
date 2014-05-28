@@ -13,91 +13,40 @@
         <div class="undertitle">С мультиплеером <s>и котиками</s></div>
         
         <div id="menu">
-            <h3>Создание комнаты</h3>
+            <h3 style="margin-bottom: 1em">Ваше имя</h3>
+            <input id="player-name" value="Неизвестный Странник" type="text"/>
+            
+            <h3 style="margin-top: 2em">Создание комнаты</h3>
             <div id="create-room">
                 <input id="create-room-name" placeholder="Название комнаты" type="text"/>
                 <input id="create-room-pass" placeholder="Пароль комнаты" style="border-left: 1px solid #404040" type="text"/>
                 <button id="create-button">—></button>
                 <div id="about-password" class="about-password">Пустое поле — отсутствие пароля.</div>
             </div>
+            
             <h3 style="margin-top: 2em">Все комнаты</h3>
-            <div id="room-list"></div>
+            <div id="room-list">— — —</div>
         </div>
         
         <div id="game">
+            <div id="other-player-name"></div>
             <canvas id="canvas" width="458" height="458"></canvas>
             
             <div id="chat">
                 <h2 style="margin-bottom: 20px; font-size: 30px">Чат</h2>
                 
                 <div id="msgs">
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_l">This is a test message</div>
-                        <div class="clear"></div>
-                    </div>
-                    <div class="msg">
-                        <div class="msg_r">This is a test answer</div>
-                        <div class="clear"></div>
-                    </div>
                 </div>
-                <textarea></textarea>
-                <button><p style="margin-top: -6px">—></p></button>
+                <textarea id="message-text"></textarea>
+                <button id="message-send"><p style="margin-top: -6px">—></p></button>
             </div>
+        </div>
+        
+        <div id="notice" class="notice"></div>
+        
+        <div id="page-darker" class="page-darker"></div>
+        <div id="replay-panel" class="replay-panel">
+            <button id="replay-button">Сыграть еще раз</button>
+        </div>
     </body>
 </html>

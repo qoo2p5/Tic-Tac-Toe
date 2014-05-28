@@ -37,6 +37,7 @@ h1, h2, h3 {
     box-sizing: border-box;
     margin: 0 auto;
     margin-top: 1em;
+    margin-bottom: 1em;
 }
 
 #msgs {
@@ -134,7 +135,7 @@ button:focus {
 
 @media(min-width: 1150px) {
     #game {
-        margin-top: 2.5em;
+        margin-top: 2.3em;
         width: 1118px;
     }
     #canvas {
@@ -148,7 +149,7 @@ button:focus {
 
 @media(min-height: 700px) {
     #game {
-        margin-top: 4em;
+        margin-top: 2.3em;
     }
 }
 
@@ -158,6 +159,10 @@ button:focus {
     margin: 0 auto;
     margin-top: 1em;
     border: 1px solid #404040;
+}
+
+#room-list {
+    text-align: center;
 }
 
 #create-room {
@@ -189,6 +194,10 @@ button:focus {
     font-family: 'Exo 2', sans serif;
 }
 
+#create-room input[type="text"]:focus {
+    box-shadow: 0 0 5px 1px #808080 inset;
+}
+
 .about-password {
     width: 240px;
     font-weight: 200;
@@ -205,6 +214,7 @@ button:focus {
     opacity: 0;
     transition: all 0.25s ease;
 }
+
 .show-about {
     opacity: 1;
 }
@@ -223,4 +233,80 @@ button:focus {
     display: none;
     margin-left: auto;
     margin-right: auto;
+}
+
+.notice {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 1.4em;
+    font-size: 1.5em;
+    padding-top: 0.1em;
+    text-align: center;
+    top: 0;
+    opacity: 1;
+    background: #ddd;
+    border-bottom: 1px solid #404040;
+    box-sizing: border-box;
+}
+
+.pshol {
+    opacity: 0;
+}
+
+.page-darker {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.replay-panel {
+    display: none;
+    width: 50%;
+    height: 10%;
+    opacity: 0;
+    transition: 1s all ease;
+    position: absolute;
+    left: 25%;
+    top: 45%;
+}
+
+.show-replay-panel {
+    display: block;
+    opacity: 1;
+}
+
+.replay-panel button {
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 200;
+    font-size: 2em;
+    width: 100%;
+    height: 100%;
+}
+
+#other-player-name {
+    text-align: center;
+    margin-bottom: 0.2em;
+    margin-top: 0.2em;
+}
+
+input[type="text"] {
+    width: 601px;
+    height: 50px;
+    margin: 0 auto;
+    display: block;
+    outline: none;
+    border: 1px solid black;
+    box-sizing: border-box;
+    font-size: 20px;
+    font-family: 'Exo 2', sans serif;
+    text-align: center;
+}
+
+input[type="text"]:focus {
+    box-shadow: 0 0 5px 1px #404040;
 }

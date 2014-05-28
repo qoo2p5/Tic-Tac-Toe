@@ -24,6 +24,7 @@ class Player():
         self.name = "Неизвестный"
         self.wants_replay = False
         self.last_activity = time.time()
+        self.disconnect = False
         Player.players[self.id] = self
         Player.next_id += 1
 
@@ -50,15 +51,15 @@ class Field():
     def check_for_win(self):
         how = []
 
-        for x in range(0, 2):
+        for x in range(0, 3):
             if self.at(x, 0) == self.at(x, 1) == self.at(x, 2) != 0:
-                for y in range(0, 2):
+                for y in range(0, 3):
                     how.append((x, y))
                 return how
 
-        for y in range(0, 2):
+        for y in range(0, 3):
             if self.at(0, y) == self.at(1, y) == self.at(2, y) != 0:
-                for x in range(0, 2):
+                for x in range(0, 3):
                     how.append((x, y))
                 return how
 
@@ -97,14 +98,20 @@ class Room():
         self.password = password
         Room.rooms[name] = self
 
+        for player_id in Player.players:
+            Packet.send(Packet9RoomsList({}, Player.players[player_id]))
+
     def add_player(self, player):
         if self.first_player is None:
             self.first_player = player
             return 1
         else:
             self.second_player = player
-            Packet.send(Packet3OtherJoinedRoom({'who': 'Кто-то'}, self.first_player))
+            Packet.send(Packet3GameStarted({}, self.first_player))
+            Packet.send(Packet3GameStarted({}, player))
             self.started = True
+            for player_id in Player.players:
+                Packet.send(Packet9RoomsList({}, Player.players[player_id]))
             return 2
 
     def other(self, player):
@@ -144,7 +151,7 @@ class Room():
 
     def wants_replay(self, player):
         player.wants_replay = True
-        if not (self.first_player.wants_replay and self.first_player.wants_replay):
+        if not (self.first_player.wants_replay and self.second_player.wants_replay):
             if player == self.first_player:
                 Packet.send(Packet8OtherWantsReplay({}, self.second_player))
             else:
@@ -202,6 +209,12 @@ class Packet():
         print(send_data)
         yield from packet.player.socket.send(send_data)
 
+    def send_data(self):
+        pass
+
+    def handle(self):
+        pass
+
 
 class Packet0Test(Packet):
     packet_id = 0
@@ -224,6 +237,7 @@ class Packet1JoinRoom(Packet):
 
     def __init__(self, args, player):
         self.room_name = args["room"]
+        self.name = args["name"]
         self.password = args["pass"]
         self.result = ""
         self.player = player
@@ -231,6 +245,8 @@ class Packet1JoinRoom(Packet):
     def handle(self):
         if self.player.room is not None:
             return
+
+        self.player.name = self.name
 
         room = Room.by_name(self.room_name)
         if room is None:
@@ -248,15 +264,9 @@ class Packet1JoinRoom(Packet):
         Packet.send(self)
 
     def send_data(self):
-        if self.player.number == 1:
-            return {
-                "result": self.result,
-                "number": self.player.number
-            }
         return {
             "result": self.result,
-            "number": self.player.number,
-            "other_name": self.player.room.other(self.player).name
+            "number": self.player.number
         }
 
 
@@ -290,16 +300,15 @@ class Packet2CreateRoom(Packet):
         }
 
 
-class Packet3OtherJoinedRoom(Packet):
+class Packet3GameStarted(Packet):
     packet_id = 3
 
     def __init__(self, args, player):
-        self.who = args["who"]
         self.player = player
 
     def send_data(self):
         return {
-            "who": self.who
+            "name": self.player.room.other(self.player).name
         }
 
 
@@ -371,7 +380,7 @@ class Packet5ChatMessage(Packet):
     def send_data(self):
         return {
             "msg": self.message,
-            "who": self.who_name,
+            "who_name": self.who_name,
             "who_number": self.who_number
         }
 
@@ -410,9 +419,6 @@ class Packet8OtherWantsReplay(Packet):
     def __init__(self, args, player):
         self.player = player
 
-    def send_data(self):
-        return {}
-
 
 class Packet9RoomsList(Packet):
     packet_id = 9
@@ -432,7 +438,7 @@ class Packet9RoomsList(Packet):
 Packet.register_client_packet(Packet0Test)
 Packet.register_client_packet(Packet1JoinRoom)
 Packet.register_client_packet(Packet2CreateRoom)
-Packet.register_client_packet(Packet3OtherJoinedRoom)
+Packet.register_client_packet(Packet3GameStarted)
 Packet.register_client_packet(Packet4SetField)
 Packet.register_client_packet(Packet5ChatMessage)
 Packet.register_client_packet(Packet6GameBreak)
@@ -448,24 +454,26 @@ def connection(websocket, path):
     data = yield from websocket.recv()
 
     while data is not None:
+        if player.disconnect:
+            break
         packet_json = json.loads(data)
 
-        try:
-            player.last_activity = time.time()
-            Packet.handle_client_packet(packet_json, player)
+        player.last_activity = time.time()
+        Packet.handle_client_packet(packet_json, player)
 
-            data = yield from websocket.recv()
+        data = yield from websocket.recv()
 
-        except Exception as e:
-            print(str(e))
-            raise e
 
     room = player.room
     if room is not None:
         if player.room.other(player) is not None:
             Packet.send(Packet6GameBreak({"reason": "OtherPlayerDisconnected"}, player.room.other(player)))
+            player.room.other(player).disconnect = True
             Player.remove(player.room.other(player))
         Room.remove(room)
+
+        for player_id in Player.players:
+            Packet.send(Packet9RoomsList({}, Player.players[player_id]))
 
     Player.remove(player)
 
@@ -475,12 +483,14 @@ def logic():
     while True:
         begin = time.time()
 
-        print(Player.players)
+        """print(Player.players)
         for r in Room.rooms:
             r = Room.rooms[r]
-            print(r.started, r.first_player, r.second_player)
+            print(r.started, r.first_player, r.second_player)"""
 
         to_delete = []
+
+        room_deleted = False
 
         for player_id in Player.players:
 
@@ -495,19 +505,22 @@ def logic():
 
                 to_delete.append(player)
 
-            if player.last_activity < begin - 360:
-                if player.room is not None:
-                    if player.room.other(player) is not None:
-                        Packet.send(Packet6GameBreak({"reason": "OtherUnactive"}))
-                        to_delete.append(player.room.other(player))
+            if player.room is not None and player.room.other(player) is not None and player.last_activity < begin - 360:
+                Packet.send(Packet6GameBreak({"reason": "OtherUnactive"}))
+                to_delete.append(player.room.other(player))
 
-                    Room.remove(player.room)
+                Room.remove(player.room)
+                room_deleted = True
 
-                Packet.send(Packet6GameBreak({"reason": "UUnactive"}))
+                Packet.send(Packet6GameBreak({"reason": "UUnactive"}, player))
                 to_delete.append(player)
 
         for player_id in to_delete:
             Player.remove(Player.players[player_id])
+
+        if room_deleted:
+            for player_id in Player.players:
+                Packet.send(Packet9RoomsList({}, Player.players[player_id]))
 
         spent_time = time.time() - begin
 
