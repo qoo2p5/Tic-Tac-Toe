@@ -206,7 +206,6 @@ class Packet():
         if not packet.player.socket.open:
             return
         send_data = Packet.packetize(packet, packet.send_data())
-        print(send_data)
         yield from packet.player.socket.send(send_data)
 
     def send_data(self):
@@ -482,11 +481,6 @@ def connection(websocket, path):
 def logic():
     while True:
         begin = time.time()
-
-        """print(Player.players)
-        for r in Room.rooms:
-            r = Room.rooms[r]
-            print(r.started, r.first_player, r.second_player)"""
 
         to_delete = []
 

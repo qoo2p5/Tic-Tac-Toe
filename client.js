@@ -608,7 +608,6 @@ function init() {
     
     ws = new WebSocket("ws://localhost:8181");
     ws.onmessage = function(event) {
-        console.log(event.data);
         Packet.handleServerPacket(JSON.parse(event.data));
     };
     ws.onclose = function(event) {
