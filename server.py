@@ -51,15 +51,15 @@ class Field():
     def check_for_win(self):
         how = []
 
-        for x in range(0, 3):
+        for x in range(3):
             if self.at(x, 0) == self.at(x, 1) == self.at(x, 2) != 0:
-                for y in range(0, 3):
+                for y in range(3):
                     how.append((x, y))
                 return how
 
-        for y in range(0, 3):
+        for y in range(3):
             if self.at(0, y) == self.at(1, y) == self.at(2, y) != 0:
-                for x in range(0, 3):
+                for x in range(3):
                     how.append((x, y))
                 return how
 
@@ -68,6 +68,16 @@ class Field():
 
         if self.at(2, 0) == self.at(1, 1) == self.at(0, 2) != 0:
             return [(2, 0), (1, 1), (0, 2)]
+
+        draw = False
+
+        for x in range(3):
+            for y in range(3):
+                if self.at(x, y) == 0:
+                    draw = True
+
+        if draw:
+            return -1
 
         return False
 
@@ -141,10 +151,16 @@ class Room():
         if not win:
             return [1]
         else:
-            self.main_field.set(field_x, field_y, pl.number)
+            set_number = pl.number
+            if win == -1:
+                set_number = -1
+
+            self.main_field.set(field_x, field_y, set_number)
             win_main = self.main_field.check_for_win()
             if win_main:
                 self.ended = True
+                if win_main == -1:
+                    return [3, -1, -1]
                 return [3, win, win_main]
             else:
                 return [2, win]
