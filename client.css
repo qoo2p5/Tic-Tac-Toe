@@ -250,10 +250,6 @@ button:focus {
     box-sizing: border-box;
 }
 
-.pshol {
-    opacity: 0;
-}
-
 .page-darker {
     display: none;
     position: absolute;
@@ -309,4 +305,13 @@ input[type="text"] {
 
 input[type="text"]:focus {
     box-shadow: 0 0 5px 1px #404040;
+}
+
+input.play-password {
+    margin-left: -1px;
+    width: 602px;
+}
+
+input.play-password:focus {
+    box-shadow: 0 0 5px 1px #808080 inset;
 }

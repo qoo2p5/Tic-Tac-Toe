@@ -23,6 +23,8 @@ var SECOND = 2;  // second player's cell
 var NAME = "Неизвестный";  // player's name
 var OTHER_NAME = "";  // other player's name
 
+var DEBUG = false;
+
 function clear() {
     ctx.clearRect(0, 0, _width, _height);
 }
@@ -200,23 +202,27 @@ function everyField(func) {
 
 NOTICE_TIMEOUT1 = -1;
 NOTICE_TIMEOUT2 = -1;
+NOTICE_INTERVAL = -1;
 
 function notify(text, time) {
     time = time || 1400;
     
     clearTimeout(NOTICE_TIMEOUT1);
     clearTimeout(NOTICE_TIMEOUT2);
+    clearInterval(NOTICE_INTERVAL);
     var elementNotify = document.getElementById("notice");
-    elementNotify.style.transition = "none";
-    elementNotify.classList.remove("pshol");
-    elementNotify.style.transition = "all " + ((5 / 7) * time) / 1000 +"s ease";
     elementNotify.innerHTML = text;
+    elementNotify.style.transition = "none";
+    elementNotify.style.opacity = 1;
+    //elementNotify.style.transition = "all " + ((5 / 7) * time) / 1000 +"s ease";
     elementNotify.style.display = "block";
     NOTICE_TIMEOUT1 = setTimeout(function() {
-        elementNotify.classList.add("pshol");  // pshol - пошел, hides element with animation, it takes 1 second
+        NOTICE_INTERVAL = setInterval(function() {
+            elementNotify.style.opacity -= 0.04;
+        }, ((5 / 7) * time) / 25);
         NOTICE_TIMEOUT2 = setTimeout(function() {
             elementNotify.style.display = "none";
-            elementNotify.classList.remove("pshol");
+            clearInterval(NOTICE_INTERVAL);
         }, (5 / 7) * time);
     }, (2 / 7) * time);
 }
@@ -268,7 +274,6 @@ Packet.send = function(packet) {
 Packet.handleServerPacket = function(packet) {
     var id = packet.id;
     var args = packet.args;
-    if(id == 1) console.log(new Packet.packets[id](args).handle);
     new Packet.packets[id](args).handle();
 };
 
@@ -286,7 +291,11 @@ Packet1JoinRoom.packet_id = 1;
 
 Packet1JoinRoom.prototype = new Packet();
 
-Packet1JoinRoom.prototype.handle = function() {    
+Packet1JoinRoom.prototype.handle = function() {
+    if (this.result == "WrongPassword") {
+        notify("Неправильный пароль!");
+    }
+    
     if (this.result != "Okay") {
         return;
     }
@@ -530,11 +539,22 @@ Packet9RoomList.prototype.handle = function() {
         el.addEventListener("click", function(event) {
             var name = event.target.parentElement.getElementsByClassName("name")[0].textContent;
             if (NEED_ROOM_PASS[name]) {
-                return;
+                var password = event.target.parentElement.getElementsByClassName("play-password")[0].value;
+                Packet.send(new Packet1JoinRoom({room: name, pass: password}));
             } else {
                 Packet.send(new Packet1JoinRoom({room: name, pass: ""}));
             }
         }, false);
+        var name = el.parentElement.getElementsByClassName("name")[0].textContent;
+        if (NEED_ROOM_PASS[name]) {
+            el.parentElement.getElementsByClassName("play-password")[0].addEventListener("keydown", function(event) {
+                if (event.keyCode == 13) {
+                    var name = event.target.parentElement.getElementsByClassName("name")[0].textContent;
+                    var password = event.target.value;
+                    Packet.send(new Packet1JoinRoom({room: name, pass: password}));
+                }
+            }, false);
+        }
     }
 };
 
@@ -553,6 +573,13 @@ Packet.registerServerPacket(Packet9RoomList);
 
 
 function renderRoomInfo(roomInfo) {
+    if (roomInfo.pass) {
+        return '<div class="room">' +
+            '<div class="name">' + roomInfo.name + '</div class="name">' +
+            '<button class="play">Play</button>' +
+            '<input type="text" class="play-password" placeholder="Пароль комнаты"/>' +
+            '</div>';
+    }
     return '<div class="room"><div class="name">' + roomInfo.name + '</div class="name"><button class="play">Play</button></div>';
 }
 
@@ -599,6 +626,8 @@ function init() {
                                                 room: document.getElementById("create-room-name").value,
                                                 pass: document.getElementById("create-room-pass").value
                                             }));
+            document.getElementById("create-room-name").value = "";
+            document.getElementById("create-room-pass").value = "";
         }
     }, false);
     
@@ -608,6 +637,9 @@ function init() {
     
     ws = new WebSocket("ws://localhost:8181");
     ws.onmessage = function(event) {
+        if (DEBUG) {
+            console.log(event.data);
+        }
         Packet.handleServerPacket(JSON.parse(event.data));
     };
     ws.onclose = function(event) {
